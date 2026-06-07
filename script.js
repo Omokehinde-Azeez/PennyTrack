@@ -9,13 +9,7 @@
    DATA
    ===================================================== */
 
-let expenses = [
-  { id: 1, name: 'Household Supplies', amount: 5550.00, date: new Date(2025, 4, 23) },
-  { id: 2, name: 'Electricity',        amount: 5000.00, date: new Date(2025, 4, 24) },
-  { id: 3, name: 'Data Subscription',  amount: 1500.00, date: new Date(2025, 4, 24) },
-  { id: 4, name: 'Transport',          amount: 1200.00, date: new Date(2025, 4, 25) },
-  { id: 5, name: 'Food Items',         amount: 2500.00, date: new Date(2025, 4, 25) }
-];
+let expenses = [];
 
 let nextId = 6;
 
@@ -31,6 +25,7 @@ const amountError = document.getElementById('amount-error');
 const addBtn      = document.getElementById('btn-add');
 const expenseList = document.getElementById('expense-list');
 const emptyState  = document.getElementById('empty-state');
+const searchInput = document.getElementById('search-input');
 const totalAmount = document.getElementById('total-amount');
 
 // Navigation
@@ -253,35 +248,47 @@ function clearAllErrors() {
   clearError(amountInput, amountError);
 }
 
+// Real-time validation
 function initRealTimeValidation() {
-  // Name field: validate on input
+  // Name field validation
   nameInput.addEventListener('input', function () {
-    if (isNameValid()) {
-      clearError(nameInput, nameError);
-    }
+    if (isNameValid()) clearError(nameInput, nameError);
     updateSubmitButton();
   });
-
   nameInput.addEventListener('blur', function () {
     if (nameInput.value.length > 0 && !isNameValid()) {
       showError(nameInput, nameError, '⚠ Expense name cannot be empty.');
     }
   });
 
-  // Amount field: validate on input
+  // Amount field validation
   amountInput.addEventListener('input', function () {
-    if (isAmountValid()) {
-      clearError(amountInput, amountError);
-    }
+    if (isAmountValid()) clearError(amountInput, amountError);
     updateSubmitButton();
   });
-
   amountInput.addEventListener('blur', function () {
     const val = amountInput.value.trim();
     if (val !== '' && !isAmountValid()) {
       showError(amountInput, amountError, '⚠ Enter a valid positive amount.');
     }
   });
+}
+
+// Search functionality
+function initSearch() {
+  if (!searchInput) return;
+  searchInput.addEventListener('input', function () {
+    renderExpenses();
+  });
+}
+
+// Helper to get date group label
+function getDateGroupLabel(dateObj) {
+  const today = new Date();
+  const diff = (today - dateObj) / (1000 * 60 * 60 * 24);
+  if (diff < 1 && today.toDateString() === dateObj.toDateString()) return 'Today';
+  if (diff < 2 && new Date(today.setDate(today.getDate() - 1)).toDateString() === dateObj.toDateString()) return 'Yesterday';
+  return formatDate(dateObj);
 }
 
 /* =====================================================
@@ -325,17 +332,60 @@ function createExpenseElement(expense) {
 function renderExpenses() {
   expenseList.innerHTML = '';
 
-  if (expenses.length === 0) {
+  // Apply search filter if any
+  const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+  const filtered = expenses.filter(exp => {
+    const nameMatch = exp.name.toLowerCase().includes(query);
+    const dateMatch = formatDate(exp.date).toLowerCase().includes(query);
+    return query === '' || nameMatch || dateMatch;
+  });
+
+  if (filtered.length === 0) {
+    // Determine which empty message to show
+    if (expenses.length === 0) {
+      emptyState.textContent = 'No expenses recorded yet. Start tracking your spending.';
+    } else {
+      emptyState.textContent = 'No matching expenses found.';
+    }
     emptyState.style.display = 'block';
     expenseList.style.display = 'none';
-  } else {
-    emptyState.style.display = 'none';
-    expenseList.style.display = 'flex';
+    return;
+  }
 
-    [...expenses].reverse().forEach(expense => {
+  emptyState.style.display = 'none';
+  expenseList.style.display = 'block';
+
+  // Group expenses by date label (Today, Yesterday, Earlier)
+  const groups = {};
+  filtered.forEach(exp => {
+    const label = getDateGroupLabel(exp.date);
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(exp);
+  });
+
+  // Sort groups: Today, Yesterday, then others descending
+  const order = ['Today', 'Yesterday'];
+  const sortedLabels = Object.keys(groups).sort((a, b) => {
+    const idxA = order.indexOf(a);
+    const idxB = order.indexOf(b);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    // For older dates, compare actual dates
+    return new Date(b) - new Date(a);
+  });
+
+  sortedLabels.forEach(label => {
+    // Create group heading
+    const heading = document.createElement('h3');
+    heading.className = 'date-group-label';
+    heading.textContent = label;
+    expenseList.appendChild(heading);
+    // Append each expense under this group
+    groups[label].forEach(expense => {
       expenseList.appendChild(createExpenseElement(expense));
     });
-  }
+  });
 }
 
 function addExpense() {
@@ -344,7 +394,9 @@ function addExpense() {
   const name   = nameInput.value.trim();
   const amount = parseFloat(amountInput.value);
 
-  expenses.push({ id: nextId++, name, amount, date: new Date() });
+  // Capture current date
+  const now = new Date();
+  expenses.push({ id: nextId++, name, amount, date: now });
 
   renderExpenses();
   updateTotal();
@@ -376,13 +428,13 @@ function initFormEvents() {
 
 /* =====================================================
    INITIALISE APPLICATION
-   ===================================================== */
-
+   ===================================================== */// Initialize application
 (function init() {
   initNavigation();
   initMobileMenu();
   initRealTimeValidation();
   initFormEvents();
+  initSearch();
   updateTotal();
   renderExpenses();
   updateSubmitButton(); // start disabled since both fields are empty

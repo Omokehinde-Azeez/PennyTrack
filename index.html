@@ -150,16 +150,18 @@
 
             <!-- EXPENSE HISTORY -->
             <section class="card history-card">
-              <h3 class="card__title">Expense History</h3>
-              
-              <div class="expense-list" id="expense-list">
-                <!-- Expenses populated by JS -->
-              </div>
-              
-              <!-- Empty State (hidden by default) -->
-              <div id="empty-state" class="empty-state" style="display: none;">
-                <p>No expenses recorded yet.</p>
-              </div>
+                <h3 class="card__title">Expense History</h3>
+                <div class="form-group">
+                  <label for="search-input" class="form-label">Search Expenses</label>
+                  <input type="text" id="search-input" class="form-input" placeholder="Search by name or date" autocomplete="off" />
+                </div>
+                <div class="expense-list" id="expense-list">
+                  <!-- Expenses populated by JS -->
+                </div>
+                <!-- Empty State (hidden by default) -->
+                <div id="empty-state" class="empty-state" style="display: none;">
+                  <p></p>
+                </div>
             </section>
           </div> <!-- /.content-grid -->
         </div>
